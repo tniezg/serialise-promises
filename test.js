@@ -114,6 +114,40 @@ describe('serialisePromises', function(){
         c.should.be.equal('c');
       },
       creatorArguments: [['a', 'b', 'c'], ['a', 'b', 'c']]
-    }).then(cb);
+    }).then(function(){cb()});
+  });
+
+  it('should collect all arguments from resolves (args)', function(cb){
+    var resolveValues = ['c', 'b', 'a'];
+
+    serialisePromises({
+      promiseCreator: function(index){
+        return Q.resolve(resolveValues[index]);
+      },
+      creatorArguments: [0, 1, 2]
+    }).then(function(result){
+      result[0].should.be.equal('c');
+      result[1].should.be.equal('b');
+      result[2].should.be.equal('a');
+
+      cb();
+    });
+  });
+
+  it('should collect all arguments from resolves (repeats)', function(cb){
+    var resolveValues = ['c', 'b', 'a'];
+
+    serialisePromises({
+      promiseCreator: function(index){
+        return 'a';
+      },
+      repeats: 3
+    }).then(function(result){
+      result[0].should.be.equal('a');
+      result[1].should.be.equal('a');
+      result[2].should.be.equal('a');
+
+      cb();
+    });
   });
 });

@@ -21,6 +21,7 @@ function serialisePromises(customOptions){
   var promiseCreator;
   var promiseIndex;
   var repeats;
+  var collectedResults;
 
   promiseCreator = options.promiseCreator;
 
@@ -33,35 +34,48 @@ function serialisePromises(customOptions){
       creatorArguments = options.creatorArguments;
 
       if(!creatorArguments.length){
-        return Q.resolve();
+        return Q.resolve([]);
       }else{
+        collectedResults = [];
         chain = Q.fcall.apply(null, [promiseCreator].concat(creatorArguments[0]));
 
         for(promiseIndex = 1; promiseIndex < creatorArguments.length; promiseIndex++){
           chain = chain.then((function(creatorArgument){
             return function(){
-                return Q.fcall.apply(null, [promiseCreator].concat(creatorArgument));
-              };
+              collectedResults = collectedResults.concat(
+                Array.prototype.slice.call(arguments));
+              return Q.fcall.apply(null, [promiseCreator].concat(creatorArgument));
+            };
           })(creatorArguments[promiseIndex]));
         }
 
-        return chain;
+        return chain.then(function(){
+          collectedResults = collectedResults.concat(
+            Array.prototype.slice.call(arguments));
+
+          return Q.resolve(collectedResults);
+        });
       }
     }else if(typeof options.repeats === 'number'){
       repeats = options.repeats;
 
       if(repeats < 2){
-        return Q.resolve();
+        return Q.resolve([]);
       }else{
+        collectedResults = [];
         chain = Q.fcall(promiseCreator);
 
         for(promiseIndex = 2; promiseIndex <= repeats; promiseIndex++){
           chain = chain.then(function(){
+            collectedResults = collectedResults.concat(Array.prototype.slice.call(arguments));
             return Q.fcall(promiseCreator);
           });
         }
 
-        return chain;
+        return chain.then(function(){
+          collectedResults = collectedResults.concat(Array.prototype.slice.call(arguments));
+          return Q.resolve(collectedResults);
+        });
       }
     }else{
       throw new Error('provide either creatorArguments (array) or repeats (number)');
